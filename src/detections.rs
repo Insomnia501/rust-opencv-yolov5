@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Representation of an image with it's detections.
 pub struct YoloImageDetections {
-    /// File Path.
-    pub file: String,
 
     /// Image Width in Pixels.
     pub image_width: u32,

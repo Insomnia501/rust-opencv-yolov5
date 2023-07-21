@@ -26,7 +26,6 @@ mod tests {
 
         assert_eq!(detections.image_width, 4608);
         assert_eq!(detections.image_height, 2560);
-        assert_eq!(detections.file, image_path.to_string());
 
         assert_eq!(detections.detections.len(), 1);
 

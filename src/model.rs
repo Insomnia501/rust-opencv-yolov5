@@ -219,7 +219,36 @@ impl YoloModel {
         let detections = non_max_suppression(detections, nms_threshold);
 
         Ok(YoloImageDetections {
-            file: image_path.to_string(),
+            image_width,
+            image_height,
+            detections,
+        })
+    }
+
+    pub fn detectMat(
+        &mut self,
+        image: Mat,
+        minimum_confidence: f32,
+        nms_threshold: f32,
+    ) -> Result<YoloImageDetections, Error> {
+
+        // Get image size
+        let image_width = image.cols() as u32;
+        let image_height = image.rows() as u32;
+
+        // Run the model on the image.
+        let result = self.forward(&image)?;
+
+        // Convert the result to a Vec of Detections.
+        let detections = self.convert_to_detections(&result)?;
+
+        // Filter the detections by confidence.
+        let detections = filter_confidence(detections, minimum_confidence);
+
+        // Non-maximum suppression.
+        let detections = non_max_suppression(detections, nms_threshold);
+
+        Ok(YoloImageDetections {
             image_width,
             image_height,
             detections,
