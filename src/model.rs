@@ -126,6 +126,38 @@ impl YoloModel {
 
         Ok((blob, width, height))
     }
+    
+    fn image_preprocess(&self, image_raw: &Mat) -> Result<Mat, Error> {
+        let mut boxed_image = Mat::default();
+
+        copy_make_border(
+            &image_raw,
+            &mut boxed_image,
+            0,
+            0,
+            0,
+            0,
+            BORDER_CONSTANT,
+            Scalar::new(114f64, 114f64, 114f64, 0f64),
+        )?;
+
+        // println!("scale factor: {:?}", 1.0 / 255.0);
+
+        let blob = opencv::dnn::blob_from_image(
+            &boxed_image,
+            1.0 / 255.0,
+            opencv::core::Size_ {
+                width: self.input_size.width,
+                height: self.input_size.height,
+            },
+            Scalar::new(0f64, 0f64, 0f64, 0f64),
+            true,
+            false,
+            CV_32F,
+        )?;
+
+        Ok(blob)
+    }
 
     /// Detect objects in an image.
     fn forward(&mut self, blob: &Mat) -> Result<Mat, Error> {
@@ -225,16 +257,18 @@ impl YoloModel {
         })
     }
 
-    pub fn detectMat(
+    pub fn detect_mat(
         &mut self,
-        image: Mat,
+        image_raw: Mat,
         minimum_confidence: f32,
         nms_threshold: f32,
     ) -> Result<YoloImageDetections, Error> {
 
         // Get image size
-        let image_width = image.cols() as u32;
-        let image_height = image.rows() as u32;
+        let image = self.image_preprocess(&image_raw)?;
+        let image_width = image_raw.cols() as u32;
+        let image_height = image_raw.rows() as u32;
+
 
         // Run the model on the image.
         let result = self.forward(&image)?;
