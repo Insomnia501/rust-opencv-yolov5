@@ -1,5 +1,5 @@
 #![cfg(feature = "cli")]
-use std::{path::PathBuf, process};
+use std::{path::PathBuf, time, process};
 
 use opencv_yolov5::{YoloImageDetections, YoloModel};
 use anyhow::Result;
@@ -14,6 +14,9 @@ use opencv::{
 #[derive(clap::Parser)]
 struct Cli {
     model_path: PathBuf,
+
+    // 0: video, 1: camera
+    mode: String,
 
     // #[clap(parse(from_os_str))]
     video_path: PathBuf,
@@ -34,6 +37,7 @@ fn main() -> Result<()> {
 
     // Handle ~ in paths
     let model_path = args.model_path.canonicalize()?;
+    let mode = args.mode;
     let video_path = args.video_path.canonicalize()?;
 
     // model trained on 640 * 640 images.
@@ -52,10 +56,22 @@ fn main() -> Result<()> {
     // restore inference result
     let mut results: Vec<YoloImageDetections> = vec![];
 
+    let mut capture: videoio::VideoCapture;
     // create video stream 
-    let mut capture = videoio::VideoCapture::from_file(video_path.to_str().unwrap(), videoio::CAP_ANY)?;
+    if mode == "0" {
+        println!("Inferencing on video: {}", video_path.to_str().unwrap());
+        capture = videoio::VideoCapture::from_file(video_path.to_str().unwrap(), videoio::CAP_ANY)?;
     
-    println!("Inferencing on video: {}", video_path.to_str().unwrap());
+    }
+    else if mode == "1" {
+        println!("Inferencing on camera.");
+        capture = videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
+
+    }
+    else {
+        println!("Invalid mode. Aborting program.");
+        process::exit(0);
+    }
 
     // create empty Mat to store image data
     let mut frame = Mat::default();
@@ -72,11 +88,12 @@ fn main() -> Result<()> {
         process::exit(0);
     }
     else {
-        //let start = time::Instant::now();
+        let start_time = time::Instant::now();
         loop {
             let is_read = capture.read(&mut frame)?;
-            if !is_read{
-                println!("video end.");
+            let elapsed_time = start_time.elapsed();
+            if !is_read || (elapsed_time.as_secs() >= 10) {
+                println!("detection end.");
                 break;
             }
             // read frame to empty mat
